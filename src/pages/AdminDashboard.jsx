@@ -1209,6 +1209,7 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { Info } from "lucide-react";
 import { FaEdit, FaTrash ,FaClipboardList,FaUsers , FaBriefcase ,FaUserFriends ,FaUserTie  } from "react-icons/fa";
+import {  PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
 
 
 const AdminDashboard = () => {
@@ -1219,6 +1220,47 @@ const AdminDashboard = () => {
   const [editUserId, setEditUserId] = useState(null); // Track which user is being edited
   const [editUserData, setEditUserData] = useState({ name: "", email: "", role: "", status: "" });
   const [managerCount, setManagerCount] = useState(0);
+  // This for the show the pie chart 
+  const [taskData, setTaskData] = useState([]);
+  const COLORS = ["#0047AB", "#40E0D0", "#8A2BE2"];
+
+  // Now this is the  fuctionality of the Pie chart
+
+  // Function to fetch tasks
+  const fetchTasks = () => {
+    axios
+      .get("http://localhost:5000/api/task/tasks/all", {
+        withCredentials: true, // Sends cookies (session token)
+      })
+      .then((response) => {
+        if (!Array.isArray(response.data)) {
+          console.error("Unexpected API response format", response.data);
+          return;
+        }
+
+        const tasks = response.data;
+        const statusCount = { todo: 0, "in-progress": 0, done: 0 };
+
+        tasks.forEach((task) => {
+          if (statusCount.hasOwnProperty(task.status)) {
+            statusCount[task.status]++;
+          } else {
+            console.warn("Unexpected status:", task.status);
+          }
+        });
+
+        setTaskData([
+          { name: "To-Do", value: statusCount.todo },
+          { name: "In Progress", value: statusCount["in-progress"] },
+          { name: "Done", value: statusCount.done },
+        ]);
+      })
+      .catch((error) => console.error("Error fetching tasks:", error));
+  };
+
+
+
+
 
   useEffect(() => {
     // Get user from sessionStorage
@@ -1351,6 +1393,7 @@ const AdminDashboard = () => {
       fetchUsers();     // Re-fetch users when the dashboard tab is active
       fetchMembers();   // Re-fetch members when the dashboard tab is active
       fetchProjects();   // Re-fetch projects when the dashboard tab is active
+      fetchTasks();   // Re-fetch tasks when the dashboard tab is active
     }
   }, [activeTab]);
 
@@ -1599,50 +1642,128 @@ const AdminDashboard = () => {
           </div>
           
           {activeTab === "dashboard" && <div className="text-4xl font-bold text-gray-800 mb-4 text-center">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 p-6">
-      {/* Total Users Card */}
-      <div className="bg-white p-6 rounded-2xl shadow-lg flex flex-col items-center justify-center text-center border border-gray-200 hover:shadow-xl transition-all">
-        <div className="bg-purple-100 p-4 rounded-full flex items-center justify-center shadow-md">
-          <div className="text-purple-700 text-3xl">
-            <FaUsers className="text-purple-700 text-2xl " />
-          </div>
-          <h3 className="text-lg font-semibold text-gray-700 mt-2 ms-2 me-2 ">Total Users</h3>
-        </div>
-        <p className="text-4xl font-bold text-gray-900 mt-3">{users.length}</p>
+            <div className="text-4xl font-bold text-gray-800 mb-4 text-center">
+            
+  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 p-6">
+    {/* Total Users Card */}
+    <div className="bg-white p-6 rounded-2xl shadow-lg flex flex-col items-center justify-center text-center border border-gray-200 hover:shadow-xl transition-all">
+      <div className="bg-purple-100 p-4 rounded-full flex items-center justify-center shadow-md">
+        <FaUsers className="text-purple-700 text-2xl " />
       </div>
-
-      {/* Total Projects Card */}
-      <div className="bg-white p-6 rounded-2xl shadow-lg flex flex-col items-center justify-center text-center border border-gray-200 hover:shadow-xl transition-all">
-        <div className="bg-purple-100 p-4 rounded-full flex items-center justify-center shadow-md">
-          <div className="text-purple-700 text-3xl">
-            <FaBriefcase className="text-orange-700 text-2xl" />
-          </div>
-          <h3 className="text-lg font-semibold text-gray-700 mt-2 ms-2 me-2">Total Projects</h3>
-        </div>
-        <p className="text-4xl font-bold text-gray-900 mt-3">{projects.length}</p>
-      </div>
-      {/* All Members */}
-      <div className="bg-white p-6 rounded-2xl shadow-lg flex flex-col items-center justify-center text-center border border-gray-200 hover:shadow-xl transition-all">
-        <div className="bg-purple-100 p-4 rounded-full flex items-center justify-center shadow-md">
-          <div className="text-purple-700 text-3xl">
-            <FaUserFriends className="text-blue-700 text-2xl" />
-          </div>
-          <h3 className="text-lg font-semibold text-gray-700 mt-2 ms-2 me-2">All Members</h3>
-        </div>
-        <p className="text-4xl font-bold text-gray-900 mt-3">{members.length}</p>
-      </div>
-       {/* All Managers */}
-       <div className="bg-white p-6 rounded-2xl shadow-lg flex flex-col items-center justify-center text-center border border-gray-200 hover:shadow-xl transition-all">
-        <div className="bg-purple-100 p-4 rounded-full flex items-center justify-center shadow-md">
-          <div className="text-purple-700 text-3xl">
-            <FaUserTie  className="text-teal-700 text-2xl" />
-          </div>
-          <h3 className="text-lg font-semibold text-gray-700 mt-2 ms-2 me-2">All Managers</h3>
-        </div>
-        <p className="text-4xl font-bold text-gray-900 mt-3">{managerCount}</p>
-      </div>
-      
+      <h3 className="text-lg font-semibold text-gray-700 mt-2">Total Users</h3>
+      <p className="text-4xl font-bold text-gray-900 mt-3">{users.length}</p>
     </div>
+
+    {/* Total Projects Card */}
+    <div className="bg-white p-6 rounded-2xl shadow-lg flex flex-col items-center justify-center text-center border border-gray-200 hover:shadow-xl transition-all">
+      <div className="bg-purple-100 p-4 rounded-full flex items-center justify-center shadow-md">
+        <FaBriefcase className="text-orange-700 text-2xl" />
+      </div>
+      <h3 className="text-lg font-semibold text-gray-700 mt-2">Total Projects</h3>
+      <p className="text-4xl font-bold text-gray-900 mt-3">{projects.length}</p>
+    </div>
+
+    {/* All Members */}
+    <div className="bg-white p-6 rounded-2xl shadow-lg flex flex-col items-center justify-center text-center border border-gray-200 hover:shadow-xl transition-all">
+      <div className="bg-purple-100 p-4 rounded-full flex items-center justify-center shadow-md">
+        <FaUserFriends className="text-blue-700 text-2xl" />
+      </div>
+      <h3 className="text-lg font-semibold text-gray-700 mt-2">All Members</h3>
+      <p className="text-4xl font-bold text-gray-900 mt-3">{members.length}</p>
+    </div>
+
+    {/* All Managers */}
+    <div className="bg-white p-6 rounded-2xl shadow-lg flex flex-col items-center justify-center text-center border border-gray-200 hover:shadow-xl transition-all">
+      <div className="bg-purple-100 p-4 rounded-full flex items-center justify-center shadow-md">
+        <FaUserTie className="text-teal-700 text-2xl" />
+      </div>
+      <h3 className="text-lg font-semibold text-gray-700 mt-2">All Managers</h3>
+      <p className="text-4xl font-bold text-gray-900 mt-3">{managerCount}</p>
+    </div>
+  </div>
+
+  {/* Pie Chart Section note that the Ui is creting issue for the mobile view so that is why we have multiple solution to choose
+  right now we have chose one of them until the we resolve the mobile issue ok got it */}
+
+  {/* <div className="flex justify-center items-start p-10 bg-white rounded-2xl shadow-lg border border-gray-200">
+    <PieChart width={680} height={580}>
+      <Pie
+        data={taskData}
+        cx="50%"
+        cy="50%"
+        outerRadius={120}
+        innerRadius={60}
+        paddingAngle={3}
+        dataKey="value"
+        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(1)}%`}
+        labelLine={false} // Removes the unnecessary label line
+      >
+        {taskData.map((entry, index) => (
+          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+        ))}
+      </Pie>
+      <Tooltip />
+      <Legend />
+    </PieChart>
+  </div> */}
+ <div className="mt-12 flex flex-col justify-center items-center ms-6 p-3 bg-white rounded-2xl shadow-lg border border-gray-200 h-1/2">
+ <h1 className="text-center text-2xl font-bold">Task Status Overiew</h1>
+
+<ResponsiveContainer width="100%" height={350}>
+        <PieChart>
+          <Pie
+            data={taskData}
+            cx="50%"
+            cy="50%"
+            outerRadius={90}
+            innerRadius={50}
+            paddingAngle={3}
+            dataKey="value"
+            label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(1)}%`}
+            labelLine={true}
+          >
+            {taskData.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+            ))}
+          </Pie>
+          <Tooltip />
+          <Legend 
+            wrapperStyle={{ fontSize: "12px", display: "flex", justifyContent: "center" }}
+            layout="horizontal" 
+            align="center" 
+          />
+        </PieChart>
+      </ResponsiveContainer>
+</div>
+{/* <div className="flex justify-center items-center ms-6 p-4 bg-white rounded-2xl shadow-lg border border-gray-200 w-[400px] h-[400px]">
+  <PieChart width={350} height={350}>
+    <Pie
+      data={taskData}
+      cx="50%"
+      cy="50%"
+      outerRadius={100}
+      innerRadius={50}
+      paddingAngle={3}
+      dataKey="value"
+      label={({ name, percent }) => (
+        <text fontSize={1}>{`${name}: ${(percent * 100).toFixed(1)}%`}</text>
+      )}
+      labelLine={false}
+    >
+      {taskData.map((entry, index) => (
+        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+      ))}
+    </Pie>
+    <Tooltip />
+    <Legend wrapperStyle={{ fontSize: "12px" }} />
+  </PieChart>
+</div> */}
+ 
+
+
+
+</div>
+
     </div>}
 
           

@@ -151,8 +151,8 @@ const Register = () => {
 
     try {
       await axios.post("http://localhost:5000/api/auth/register", { name, email, password, role }, { withCredentials: true });
-      setSuccess("Registration successful! Redirecting to login...");
-      setTimeout(() => navigate("/login"), 2000);
+      setSuccess("Registration successful! ");
+      // setTimeout(() => navigate("/login"), 2000);
     } catch (error) {
       setError(error.response?.data?.message || "Registration failed");
     }

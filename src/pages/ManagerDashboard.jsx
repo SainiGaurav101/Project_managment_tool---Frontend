@@ -578,10 +578,11 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { Info } from "lucide-react"; // Import an info icon
 import { FaClipboardList } from "react-icons/fa";
-
+import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
+const COLORS = ["#0047AB", "#40E0D0", "#8A2BE2"];
 
 const ManagerDashboard = () => {
-   const [activeTab, setActiveTab] = useState("All projects");
+   const [activeTab, setActiveTab] = useState("dashboard");
   const [members, setMembers] = useState([]);
   const [selectedMembers, setSelectedMembers] = useState([]);
   const [projects, setProjects] = useState([]);
@@ -597,11 +598,76 @@ const ManagerDashboard = () => {
   const [user, setUser] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
 
+  // This is the functionality for the pie chart
+  const [taskData, setTaskData] = useState([]);
+
+
+   // ✅ Function to fetch user data from session storage
+   useEffect(() => {
+    const userData = sessionStorage.getItem("user");
+    if (userData) {
+      setUser(JSON.parse(userData));
+    }
+  }, []);
 
   useEffect(() => {
     fetchMembers();
     fetchProjects();
+    fetchTasks();
   }, []);
+
+
+// Pie Chart Fucntionality 
+ 
+   // Function to fetch tasks
+const fetchTasks = async (user, setTaskData) => {
+  try {
+    const response = await axios.get("http://localhost:5000/api/task/tasks/all", { withCredentials: true });
+
+    if (!Array.isArray(response.data)) {
+      console.error("Unexpected API response format", response.data);
+      return;
+    }
+
+    let tasks = response.data;
+
+    if (user?.role === "manager" && user?.id) {
+      // ✅ Show only tasks created by the logged-in manager
+      tasks = tasks.filter(task => task.creator.id === user.id);
+    }
+
+    // ✅ Count tasks by status (To-Do, In Progress, Done)
+    const statusCount = { todo: 0, "in-progress": 0, done: 0 };
+
+    tasks.forEach(task => {
+      if (statusCount.hasOwnProperty(task.status)) {
+        statusCount[task.status] += 1;
+      }
+    });
+
+    // ✅ Set task data for Pie Chart
+    setTaskData([
+      { name: "To-Do", value: statusCount.todo },
+      { name: "In Progress", value: statusCount["in-progress"] },
+      { name: "Done", value: statusCount.done },
+    ]);
+
+    // console.log("Filtered Tasks:", tasks); // Debugging: Check if correct tasks are being shown
+    // console.log("Task Status Count:", statusCount); // Debugging: Verify count
+  } catch (error) {
+    console.error("Error fetching tasks:", error);
+  }
+};
+
+// ✅ Fetch tasks only when `user` is available
+useEffect(() => {
+  if (user) {
+    fetchTasks(user, setTaskData);
+  }
+}, [user]);
+
+
+
 
 
   const fetchMembers = async () => {
@@ -663,16 +729,6 @@ const ManagerDashboard = () => {
   };
 
 // Image and name functionality
- 
-
-  // ✅ Function to fetch user data from session storage
-  useEffect(() => {
-    const userData = sessionStorage.getItem("user");
-    if (userData) {
-      setUser(JSON.parse(userData));
-    }
-  }, []);
-
   // ✅ Handle file selection
   const handleFileChange = (event) => {
     const file = event.target.files[0];
@@ -769,7 +825,7 @@ const ManagerDashboard = () => {
         {/* Navigation Links */}
         <ul className="w-full mt-6 space-y-2 flex-1">
           {[
-            // { name: "Dashboard", key: "dashboard" },
+            { name: "Dashboard", key: "dashboard" },
             // { name: "All Users", key: "users" },
             { name: "All Projects", key: "projects" },
           ].map((item) => (
@@ -807,6 +863,81 @@ const ManagerDashboard = () => {
             Create Project
           </button>
         )}
+        {activeTab === "dashboard" && (
+       <div className="mt-12 flex flex-col justify-center items-center ms-6 p-3 bg-white rounded-2xl shadow-lg border border-gray-200 h-1/2">
+       <h1 className="text-center text-2xl font-bold">Task Status Overiew</h1>
+ 
+       <ResponsiveContainer width="100%" height={350}>
+         <PieChart>
+           <Pie
+             data={taskData}
+             cx="50%"
+             cy="50%"
+             outerRadius={90}
+             innerRadius={50}
+             paddingAngle={3}
+             dataKey="value"
+             label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(1)}%`}
+             labelLine={true}
+           >
+             {taskData.map((entry, index) => (
+               <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+             ))}
+           </Pie>
+           <Tooltip />
+           <Legend 
+             wrapperStyle={{ fontSize: "12px", display: "flex", justifyContent: "center" }}
+             layout="horizontal" 
+             align="center" 
+           />
+         </PieChart>
+       </ResponsiveContainer>
+     </div>
+        )}
+        {activeTab === "projects" && (
+      <div className="mt-8 bg-white p-6 rounded-lg shadow-md">
+        <h3 className="text-2xl font-semibold mb-4 text-gray-700">All Projects</h3>
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse border border-gray-300">
+            <thead>
+              <tr className="bg-gray-200 text-gray-700">
+                <th className="border border-gray-300 px-4 py-2">Project ID</th>
+                <th className="border border-gray-300 px-4 py-2">Project Name</th>
+                <th className="border border-gray-300 px-4 py-2">Created By</th>
+                <th className="border border-gray-300 px-4 py-2">Company</th>
+                <th className="border border-gray-300 px-4 py-2">Deadline</th>
+                <th className="border border-gray-300 px-4 py-2">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {projects.map((project) => (
+                <tr key={project.id} className="text-center border-b border-gray-300">
+                  <td className="border border-gray-300 px-4 py-2">{project.id}</td>
+                  <td className="border border-gray-300 px-4 py-2">
+                    <button
+                      onClick={() => navigate(`/project/${project.id}`)}
+                      className="text-blue-600 hover:underline cursor-pointer"
+                    >
+                      {project.project_name}
+                    </button>
+                  </td>
+                  <td className="border border-gray-300 px-4 py-2">{project.created_by_name}</td>
+                  <td className="border border-gray-300 px-4 py-2">{project.company_name}</td>
+                  <td className="border border-gray-300 px-4 py-2">{project.deadline.split("T")[0]}</td>
+                  <td className="border border-gray-300 px-4 py-2">
+                    <button
+                      onClick={() => navigate(`/kanban/${project.id}`)}
+                      className="bg-blue-500 text-white px-4 py-2 rounded-md ml-2 hover:bg-blue-700 transition cursor-pointer"
+                    >
+                   <FaClipboardList className="inline-block mr-1" />   View  Board
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>)}
 
         {showForm && (
            <div className="fixed inset-0 flex items-center justify-center bg-gray-900 bg-opacity-50">
@@ -916,49 +1047,7 @@ const ManagerDashboard = () => {
 
       </div>
 
-      <div className="mt-8 bg-white p-6 rounded-lg shadow-md">
-        <h3 className="text-2xl font-semibold mb-4 text-gray-700">All Projects</h3>
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse border border-gray-300">
-            <thead>
-              <tr className="bg-gray-200 text-gray-700">
-                <th className="border border-gray-300 px-4 py-2">Project ID</th>
-                <th className="border border-gray-300 px-4 py-2">Project Name</th>
-                <th className="border border-gray-300 px-4 py-2">Created By</th>
-                <th className="border border-gray-300 px-4 py-2">Company</th>
-                <th className="border border-gray-300 px-4 py-2">Deadline</th>
-                <th className="border border-gray-300 px-4 py-2">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {projects.map((project) => (
-                <tr key={project.id} className="text-center border-b border-gray-300">
-                  <td className="border border-gray-300 px-4 py-2">{project.id}</td>
-                  <td className="border border-gray-300 px-4 py-2">
-                    <button
-                      onClick={() => navigate(`/project/${project.id}`)}
-                      className="text-blue-600 hover:underline cursor-pointer"
-                    >
-                      {project.project_name}
-                    </button>
-                  </td>
-                  <td className="border border-gray-300 px-4 py-2">{project.created_by_name}</td>
-                  <td className="border border-gray-300 px-4 py-2">{project.company_name}</td>
-                  <td className="border border-gray-300 px-4 py-2">{project.deadline.split("T")[0]}</td>
-                  <td className="border border-gray-300 px-4 py-2">
-                    <button
-                      onClick={() => navigate(`/kanban/${project.id}`)}
-                      className="bg-blue-500 text-white px-4 py-2 rounded-md ml-2 hover:bg-blue-700 transition cursor-pointer"
-                    >
-                   <FaClipboardList className="inline-block mr-1" />   View  Board
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+     
     </div>
       </div>
     </>
